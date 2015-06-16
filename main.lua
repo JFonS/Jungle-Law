@@ -1,6 +1,7 @@
--- Load some default values for our rectangle.
+require 'NEAT'
+
 function love.load()
-  if arg[#arg] == "-debug" then require("mobdebug").start() end
+  --if arg[#arg] == "-debug" then require("mobdebug").start() end
   x, y, w, h = 20, 20, 60, 20;
 end
  
