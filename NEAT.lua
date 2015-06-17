@@ -53,18 +53,19 @@ function CreateBoard()
     end
   end
   
-  destRow = 2
-  destCol = 6
+  destRow = 1
+  destCol = 8
   playerRow = 8
   lastPlayerRow = playerRow
   playerCol = 1
   lastPlayerCol = playerCol
   rounds = 0
+  currentOutputs = {}
 
-  Board[2][5] = -1
-  Board[2][7] = -1
-  Board[3][6] = -1
-  Board[3][7] = -1
+  Board[6][1] = -1
+  Board[6][2] = -1
+  Board[6][3] = -1
+  Board[6][4] = -1
   Board[1][5] = -1
   Board[1][6] = -1
   Board[3][2] = -1
@@ -783,7 +784,7 @@ function evaluateCurrent()
     return -1 
   end
 
-  print("---------------------")
+  --[[print("---------------------")
   io.write("UP: ") 
   print(outputs[1])
   io.write("RIGHT: ") 
@@ -791,7 +792,8 @@ function evaluateCurrent()
   io.write("DOWN: ") 
   print(outputs[3])
   io.write("LEFT: ") 
-  print(outputs[4])
+  print(outputs[4])]]
+  currentOutputs = outputs
   
   lastValue = Board[playerRow][playerCol]
   Board[lastPlayerRow][lastPlayerCol] = 0
@@ -928,7 +930,7 @@ function main()
     lastPlayerRow = playerRow
     lastPlayerCol = playerCol
     
-    printBoard()
+   -- printBoard()
       
     local currentTile = evaluateCurrent()
     if(currentTile == 2 or currentTile == -1 or timeout <= 0 or rounds >= MaxRounds) then
