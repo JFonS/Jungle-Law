@@ -1,8 +1,9 @@
 require 'NEAT'
 
 function love.load()
-  --if arg[#arg] == "-debug" then require("mobdebug").start() end
+  if arg[#arg] == "-debug" then require("mobdebug").start() end
   x, y, w, h = 20, 20, 60, 20;
+  main()
 end
  
 -- Increase the size of the rectangle every frame.

@@ -4,13 +4,15 @@
 -- For SMW, make sure you have a save state named "DP1.state" at the beginning of a level,
 -- and put a copy in both the Lua folder and the root directory of BizHawk.
 
-
+--CONSTANTS-------------
+BOARD_SIZE = 8;
+------------------------
 
 saveLoadFile = "4enratlla"
-InputSize = 0 -- TODO
+InputSize = BOARD_SIZE * BOARD_SIZE -- TODO
 
 Inputs = InputSize+1
-Outputs = 0 -- TODO
+Outputs = 4 -- TODO
 
 Population = 300
 DeltaDisjoint = 2.0
@@ -29,13 +31,73 @@ StepSize = 0.1
 DisableMutationChance = 0.4
 EnableMutationChance = 0.2
 
-TimeoutConstant = 20
+TimeoutConstant = 5
+
+lastPlayerRow = playerRow
+lastPlayerCol = playerCol
+timeout = TimeoutConstant
 
 MaxNodes = 1000000
 
+function CreateBoard()
+  --CREATE BOARD---------------------
+  --  0: Aire
+  --  1: Player
+  --  2: Desti
+  -- -1: Caca 
+  Board = {}
+  for i=1,BOARD_SIZE do
+    Board[i] = {}
+    for j=1,BOARD_SIZE do
+      Board[i][j] = 0
+    end
+  end
+  
+  destRow = 2
+  destCol = 6
+  playerRow = 8
+  lastPlayerRow = playerRow
+  playerCol = 1
+  lastPlayerCol = playerCol
+  rounds = 0
+
+  Board[3][2] = -1
+  Board[3][5] = -1
+  Board[5][3] = -1
+  Board[6][6] = -1
+
+  Board[destRow][destCol] = 2
+  Board[playerRow][playerCol] = 1
+end
+
+-----------------------------------
+
+function printBoard()
+  for i=1,BOARD_SIZE do
+    for j=1,BOARD_SIZE do
+      if(Board[i][j] == -1) then io.write("* ")
+      else io.write(Board[i][j] .. " ")
+      end
+    end
+    print(" ")
+  end
+end
+
+function getFitness()
+  local distance = math.abs(playerRow - destRow) + math.abs(playerCol - destCol)
+  if(distance == 0) then distance = 0.1 end --evitem dividir entre 0
+  return (1/distance) / rounds
+end
+
 function getInputs()
   local inputs = {}
-  -- TODO
+
+  for i=1,BOARD_SIZE do
+    for j=1,BOARD_SIZE do
+      inputs[#inputs + 1] = Board[i][j]
+    end
+  end
+
   return inputs
 end
 
@@ -205,11 +267,10 @@ function evaluateNetwork(network, inputs)
 
   local outputs = {}
   for o=1,Outputs do
-    local button = "P1 " .. ButtonNames[o]
     if network.neurons[MaxNodes+o].value > 0 then
-      outputs[button] = true
+      outputs[o] = true
     else
-      outputs[button] = false
+      outputs[o] = false
     end
   end
 
@@ -671,6 +732,9 @@ function initializePool()
 end
 
 function initializeRun()
+  
+  CreateBoard()
+  
   local species = pool.species[pool.currentSpecies]
   local genome = species.genomes[pool.currentGenome]
   generateNetwork(genome)
@@ -682,9 +746,51 @@ function evaluateCurrent()
   local genome = species.genomes[pool.currentGenome]
 
   inputs = getInputs()
-  controller = evaluateNetwork(genome.network, inputs)
+  outputs = evaluateNetwork(genome.network, inputs)
 
-  -- APLY MOVEMENT 
+  --APPLY MOVEMENT
+  -- 1: up
+  -- 2: right
+  -- 3: down
+  -- 4: left
+  if(outputs[1] and not outputs[3]) then playerRow = playerRow - 1
+  elseif(not outputs[1] and outputs[3]) then playerRow = playerRow + 1 
+  end
+
+  if(outputs[2] and not outputs[4]) then playerCol = playerCol + 1
+  elseif(not outputs[2] and outputs[4]) then playerCol = playerCol - 1 
+  end
+  
+  if(playerCol > BOARD_SIZE) then 
+    playerCol = lastPlayerCol
+    return -1
+  elseif(playerCol < 1) then 
+    playerCol = lastPlayerCol
+    return -1 
+  end
+  
+  if(playerRow > BOARD_SIZE) then 
+    playerRow = lastPlayerRow
+    return -1 
+  elseif(playerRow < 1) then 
+    playerRow = lastPlayerRow
+    return -1 
+  end
+
+  print("---------------------")
+  io.write("UP: ") 
+  print(outputs[1])
+  io.write("RIGHT: ") 
+  print(outputs[2])
+  io.write("DOWN: ") 
+  print(outputs[3])
+  io.write("LEFT: ") 
+  print(outputs[4])
+  
+  Board[lastPlayerRow][lastPlayerCol] = 0
+  Board[playerRow][playerCol] = 1
+
+  return Board[playerRow][playerCol]
 end
 
 if pool == nil then
@@ -751,7 +857,7 @@ function loadFile(filename)
   pool = newPool()
   pool.generation = file:read("*number")
   pool.maxFitness = file:read("*number")
-  
+
   local numSpecies = file:read("*number")
   for s=1,numSpecies do
     local species = newSpecies()
@@ -792,35 +898,70 @@ function loadFile(filename)
   initializeRun()
 end
 
-function main() 
-  writeFile("temp.pool")
+function pause()
+   io.stdin:read'*l'
+end
 
+MaxRounds = 50
+function main() 
+  
+  CreateBoard()
+  writeFile("temp.pool")
+  
   while true do
+    
     local species = pool.species[pool.currentSpecies]
     local genome = species.genomes[pool.currentGenome]
 
-
-    evaluateCurrent()
-
-    local fitness = 0 -- TODO calcular fitness
-    if fitness == 0 then
-      fitness = -1
+    timeout = timeout - 1
+    rounds = rounds + 1
+    if(lastPlayerRow ~= playerRow or lastPlayerCol ~= playerCol) then
+      timeout = TimeoutConstant
     end
+    lastPlayerRow = playerRow
+    lastPlayerCol = playerCol
+    
+    printBoard()
+      
+    local currentTile = evaluateCurrent()
+    if(currentTile == 2 or currentTile == -1 or timeout <= 0 or rounds >= MaxRounds) then
 
-    genome.fitness = fitness
+      local fitness = getFitness() -- TODO calcular fitness
+      if(currentTile == 2) then 
+        fitness = fitness + 1000
+      end
+        
+      if(currentTile == -1 or timeout <= 0) then 
+        fitness = fitness / 10 
+      end
+      
+      print("********* FINISHED ***********");
+      if(currentTile == 2) then print("Arrived ? YES") else print("Arrived ? NO") end
+      print("Finished in " .. rounds .. " rounds.");
+      print("******************************")
+      
+      timeout = TimeoutConstant
+      rounds = 0
+      
+      --if fitness == 0 then
+      --   fitness = -1
+      --end
 
-    if fitness > pool.maxFitness then
-      pool.maxFitness = fitness
-      writeFile("backup." .. pool.generation .. "." .. saveLoadFile)
+      genome.fitness = fitness
+
+      if fitness > pool.maxFitness then
+        pool.maxFitness = fitness
+        writeFile("backup." .. pool.generation .. "." .. saveLoadFile)
+      end
+
+      print("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
+      pool.currentSpecies = 1
+      pool.currentGenome = 1
+      while fitnessAlreadyMeasured() do
+        nextGenome()
+      end
+      initializeRun()
     end
-
-    console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
-    pool.currentSpecies = 1
-    pool.currentGenome = 1
-    while fitnessAlreadyMeasured() do
-      nextGenome()
-    end
-    initializeRun()
   end
 
   local measured = 0
