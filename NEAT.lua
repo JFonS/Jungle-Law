@@ -61,6 +61,12 @@ function CreateBoard()
   lastPlayerCol = playerCol
   rounds = 0
 
+  Board[2][5] = -1
+  Board[2][7] = -1
+  Board[3][6] = -1
+  Board[3][7] = -1
+  Board[1][5] = -1
+  Board[1][6] = -1
   Board[3][2] = -1
   Board[3][5] = -1
   Board[5][3] = -1
@@ -787,10 +793,11 @@ function evaluateCurrent()
   io.write("LEFT: ") 
   print(outputs[4])
   
+  lastValue = Board[playerRow][playerCol]
   Board[lastPlayerRow][lastPlayerCol] = 0
   Board[playerRow][playerCol] = 1
 
-  return Board[playerRow][playerCol]
+  return lastValue
 end
 
 if pool == nil then
@@ -932,7 +939,7 @@ function main()
       end
         
       if(currentTile == -1 or timeout <= 0) then 
-        fitness = fitness / 10 
+        fitness = fitness / 10 * rounds
       end
       
       print("********* FINISHED ***********");
