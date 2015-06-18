@@ -5,9 +5,10 @@ local boardSize = BOARD_SIZE * tileSize
 local outputTexts = {"U","R","D","L"}
 
 function love.load()
-
+  love.window.setMode( boardSize+300, boardSize+tileSize)
   CreateBoard()
   writeFile("temp.pool")
+  
 
 end
 
@@ -78,12 +79,13 @@ end
 
 function draw_square(row,col,val)
   if (val == -1) then love.graphics.setColor(255,0,0)
-  elseif (val == 0) then love.graphics.setColor(100,100,100)
-  elseif (val == 1) then love.graphics.setColor(0,100,50)
+  elseif (val == 0) then love.graphics.setColor(60,60,60)
+  elseif (val == 1) then love.graphics.setColor(50,255,50)
+  elseif (val == 4) then love.graphics.setColor(255,255,255)
   else love.graphics.setColor(50,0,100)
   end
 
-  love.graphics.rectangle("fill",boardSize - row*tileSize,boardSize-col*tileSize,tileSize,tileSize)
+  love.graphics.rectangle("fill",(col-1)*tileSize,(row-1)*tileSize,tileSize,tileSize)
 end
 
 
@@ -95,12 +97,20 @@ function love.draw()
     end
     print(" ")
   end
-  love.graphics.setColor(255,255,255)
+  
+  love.graphics.setNewFont(tileSize-5)
   for i=1,#currentOutputs do
     if currentOutputs[i] then
+      draw_square(BOARD_SIZE+1,1+i,4)
+      love.graphics.setColor(0,0,0)
       love.graphics.printf(outputTexts[i],tileSize*i, boardSize, tileSize,"center")
       end
   end
+    love.graphics.setColor(255,255,255)
+   love.graphics.setNewFont(15)
+  love.graphics.printf("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " (" .. math.floor(measured/total*100) .. "%)",boardSize+5, 0, 300, "left")
+   --             gui.drawText(0, 12, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3), 0xFF000000, 11)
+    --            gui.drawText(100, 12, "Max Fitness: " .. math.floor(pool.maxFitness), 0xFF000000, 11)
   
 end
 
