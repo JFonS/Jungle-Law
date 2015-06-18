@@ -33,7 +33,7 @@ EnableMutationChance = 0.2
 
 TimeoutConstant = 5
 
-lastPlayerRow = playerRow
+lastPlayerRow = playerRowgetFi
 lastPlayerCol = playerCol
 timeout = TimeoutConstant
 
