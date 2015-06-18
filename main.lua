@@ -5,6 +5,7 @@ local boardSize = BOARD_SIZE * tileSize
 local outputTexts = {"U","R","D","L"}
 local frames = 0
 local speed = 1
+local startTime = love.timer.getTime()
 
 function love.load()
   love.window.setMode( boardSize+300, boardSize+tileSize)
@@ -120,6 +121,8 @@ function love.draw()
   love.graphics.printf("Fitness: " .. getFitness(),boardSize+5, tileSize, 300, "left")
   love.graphics.printf("Max Fitness: " .. pool.maxFitness,boardSize+5, tileSize*2, 300, "left")
   love.graphics.printf("Speed: " .. 11-speed,boardSize+5, tileSize*3, 300, "left")
+  time = love.timer.getTime() - startTime
+  love.graphics.printf("Time: " .. math.floor(time/60) .. ":" .. math.floor(time%60), boardSize+5, tileSize*4, 300, "left")
 end
 
 function love.keypressed( key, isrepeat )
