@@ -8,6 +8,7 @@ function love.load()
 
   CreateBoard()
   writeFile("temp.pool")
+  --loadFile("backup.99.4enratlla")
 
 end
 
@@ -46,7 +47,6 @@ function love.update(dt)
     timeout = TimeoutConstant
     rounds = 0
 
-
     genome.fitness = fitness
 
     if fitness > pool.maxFitness then
@@ -83,7 +83,7 @@ function draw_square(row,col,val)
   else love.graphics.setColor(50,0,100)
   end
 
-  love.graphics.rectangle("fill",boardSize - row*tileSize,boardSize-col*tileSize,tileSize,tileSize)
+  love.graphics.rectangle("fill", col*tileSize, row*tileSize,tileSize,tileSize)
 end
 
 
@@ -93,7 +93,7 @@ function love.draw()
     for j=1,BOARD_SIZE do
       draw_square(i,j,Board[i][j])
     end
-    print(" ")
+    --print(" ")
   end
   love.graphics.setColor(255,255,255)
   for i=1,#currentOutputs do

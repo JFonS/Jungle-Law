@@ -53,27 +53,32 @@ function CreateBoard()
     end
   end
   
-  destRow = 1
-  destCol = 8
   playerRow = 8
-  lastPlayerRow = playerRow
   playerCol = 1
+  lastPlayerRow = playerRow
   lastPlayerCol = playerCol
   rounds = 0
   currentOutputs = {}
 
-  Board[6][1] = -1
-  Board[6][2] = -1
-  Board[6][3] = -1
-  Board[6][4] = -1
-  Board[1][5] = -1
-  Board[1][6] = -1
+  Board[2][6] = -1
+  Board[2][8] = -1
+  Board[3][1] = -1
   Board[3][2] = -1
+  Board[3][3] = -1
   Board[3][5] = -1
+  Board[3][8] = -1
+  Board[3][6] = -1
+  Board[4][6] = -1
+  Board[4][7] = -1
+  Board[4][8] = -1
+  Board[1][8] = -1
+  Board[5][2] = -1
   Board[5][3] = -1
+  Board[5][4] = -1
+  Board[5][5] = -1
   Board[6][6] = -1
 
-  Board[destRow][destCol] = 2
+  Board[3][7] = 2
   Board[playerRow][playerCol] = 1
 end
 
@@ -90,8 +95,126 @@ function printBoard()
   end
 end
 
+
+----------------------- BFS STUFFFF ----------------------------
+----------------------------------------------------------------
+function getPosFromRowCol(row, col)
+  return (row-1) * BOARD_SIZE + col
+end
+
+function getRowFromPos(pos)
+  return math.floor((pos-1) / BOARD_SIZE) + 1
+end
+
+function getColFromPos(pos)
+  return ((pos-1) % BOARD_SIZE) + 1
+end
+
+function getBoardValue(pos)
+  row = getRowFromPos(pos)
+  col = getColFromPos(pos)
+  if (not canTravelTo(pos)) then return nil end
+  return Board[row][col]
+end
+
+function contains(array, value)
+  for i=1, #array do
+    if(array[i] == value) then return true end
+  end
+  return false
+end
+
+function table.copy(t)
+  local u = { }
+  for k, v in pairs(t) do u[k] = v end
+  return setmetatable(u, getmetatable(t))
+end
+
+function canTravelTo(pos)
+  row = getRowFromPos(pos)
+  col = getColFromPos(pos)
+  return  row >= 1 and row <= BOARD_SIZE and 
+          col >= 1 and col <= BOARD_SIZE and 
+          Board[row][col] ~= -1 and Board[row][col] ~= 1
+end
+
+function printTable(array)
+  io.write("[")
+  for i=1, #array do
+    io.write("(" .. getRowFromPos(array[i]) .. ", " .. getColFromPos(array[i]) .. ")" .. ", ")
+  end
+  print("]")
+end
+
+function getDistanceToDestiny()
+  --print("::::::::::::::::::")
+  --for i=1,BOARD_SIZE do
+  --for j=1,BOARD_SIZE do
+   --   print(getPosFromRowCol(i,j) .. ": (" .. i .. ", " .. j .. ")" )
+  --end end
+  --print("::::::::::::::::::")
+  
+  --print("______________________ NEW BFS _________________________" )
+  --print("_______________________________________________" )
+  --print("_______________________________________________" )
+  local distance = 0
+  local visited = {}
+  --print(playerRow .. " ...... " .. playerCol)
+  visited[#visited+1] = getPosFromRowCol(playerRow, playerCol)
+  --print(playerRow .. ", " .. playerCol .. ",,, visited[1] " ..  getPosFromRowCol(playerRow, playerCol))
+  local toVisit = { }
+  local toVisitNext = { }
+  toVisitNext[#toVisitNext + 1] = visited[1]
+  local current = -1
+  --print("START POINT: (" .. getRowFromPos(visited[1]) .. ", " .. getColFromPos(visited[1]) .. ")")
+  if(not canTravelTo(visited[1])) then return -1 end --si comenca a una pos fora del taulell o invalida
+
+  while #toVisitNext > 0 do
+   -- io.write("toVisit: ")  printTable(toVisit) 
+    --io.write("toVisitNext: ")  printTable(toVisitNext)
+    toVisit = table.copy(toVisitNext)
+    toVisitNext = {}
+    
+    while #toVisit > 0 do
+      current = toVisit[#toVisit]
+      --print("Current: (" .. getRowFromPos(current) .. ", " .. getColFromPos(current) .. "),  distance from START POINT: " .. distance)
+      visited[#visited+1] = current
+      
+      if( getBoardValue(current) == 2 ) then --DESTINY FOUND
+        --print("FOUND BFS TO DESTINY, distance: " .. distance)
+        return distance 
+      end 
+      
+      --Add each one of the tiles around the player (if they can be travelled and havent been visited b4)
+      for i=-1,1 do 
+        for j=-1,1 do
+          local row = getRowFromPos(current) + i
+          local col = getColFromPos(current) + j
+          local posOfNewTile = getPosFromRowCol(row, col)
+          if( canTravelTo(posOfNewTile) and 
+               not contains(visited, posOfNewTile) and 
+               not contains(toVisit, posOfNewTile) and 
+               not contains(toVisitNext, posOfNewTile)) then
+               
+            toVisitNext[#toVisitNext+1] = posOfNewTile
+            --print("Adding: (" .. getRowFromPos(posOfNewTile) .. ", " .. getColFromPos(posOfNewTile) .. ")")
+            
+          end
+        end
+      end
+      --print("Removing: (" .. getRowFromPos(toVisit[#toVisit]) .. ", " .. getColFromPos(toVisit[#toVisit]) .. ")")
+      table.remove(toVisit, #toVisit) --Pop the last tile toVisit
+    end
+    distance = distance + 1
+  end
+  return distance
+end
+----------------------------------------------------------------
+----------------------------------------------------------------
+
 function getFitness()
-  local distance = math.abs(playerRow - destRow) + math.abs(playerCol - destCol)
+  --local distance = math.abs(playerRow - destRow) + math.abs(playerCol - destCol)
+  local distance = getDistanceToDestiny()
   if(distance == 0) then distance = 0.1 end --evitem dividir entre 0
   return (1/distance) / rounds
 end
@@ -760,6 +883,19 @@ function evaluateCurrent()
   -- 2: right
   -- 3: down
   -- 4: left
+  --[[
+  print(playerRow .. ", " .. playerCol)
+  print("---------------------")
+  io.write("UP: ") 
+  print(outputs[1])
+  io.write("RIGHT: ") 
+  print(outputs[2])
+  io.write("DOWN: ") 
+  print(outputs[3])
+  io.write("LEFT: ") 
+  print(outputs[4])
+  ]]
+  
   if(outputs[1] and not outputs[3]) then playerRow = playerRow - 1
   elseif(not outputs[1] and outputs[3]) then playerRow = playerRow + 1 
   end
@@ -767,6 +903,8 @@ function evaluateCurrent()
   if(outputs[2] and not outputs[4]) then playerCol = playerCol + 1
   elseif(not outputs[2] and outputs[4]) then playerCol = playerCol - 1 
   end
+  
+  --print(playerRow .. ", " .. playerCol)
   
   if(playerCol > BOARD_SIZE) then 
     playerCol = lastPlayerCol
@@ -784,15 +922,6 @@ function evaluateCurrent()
     return -1 
   end
 
-  --[[print("---------------------")
-  io.write("UP: ") 
-  print(outputs[1])
-  io.write("RIGHT: ") 
-  print(outputs[2])
-  io.write("DOWN: ") 
-  print(outputs[3])
-  io.write("LEFT: ") 
-  print(outputs[4])]]
   currentOutputs = outputs
   
   lastValue = Board[playerRow][playerCol]
