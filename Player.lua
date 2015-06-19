@@ -3,24 +3,50 @@ require 'Neat'
 
 Player = class('Player') 
 
+Player.static.timeoutStuckConstant = 5
+Player.static.timeoutRepeatConstant = 50
+
 function Player:initialize(x, y)
   self.x = x or 1
   self.y = y or 1
+  self.start = {}
+  self.start.x, self.start.y = self.x, self.y
+  self.timeoutStuck = Player.static.timeoutStuckConstant
+  self.timeoutRepeat = Player.static.timeoutRepeatConstant
+  self.rounds = 0
+  self.maxFitness = 0
   self.neat = Neat:new(0,8*8,4)
+end
+
+function printTable(table)
+  for _,value in pairs(table) do
+    if value then
+      io.write("T, ")
+    else
+      io.write("F, ")
+    end
+  end
+  print(" ")
 end
 
 
 function Player:update(board) 
-  print("sdafdssd")
+  
+  self.rounds = self.rounds + 1
+  
   local inputs = {}
   for i=1, Board.static.size do
     for j=1, Board.static.size do
       inputs[#inputs + 1] = board.cells[i][j]
     end
   end
-
+  
   local outputs = self.neat:evaluateCurrent(inputs)
-
+  --io.write("outputs: ")
+  --printTable(outputs)
+  
+  local lastX, lastY = self.x, self.y
+  
   if(outputs[1] and not outputs[3]) then 
     self.y = self.y - 1
   elseif(not outputs[1] and outputs[3]) then 
@@ -33,33 +59,78 @@ function Player:update(board)
     self.x = self.x - 1 
   end
 
-  local lastX, lastY = self.x, self.y
-
   if(self.x > Board.static.size) then 
     self.x = lastX
-    return -1
   elseif(self.x < 1) then 
-    self.x = lastY
-    return -1 
+    self.x = lastX
   end
 
   if(self.y > Board.static.size) then 
     self.y = lastY
-    return -1 
   elseif(self.y < 1) then 
     self.y = lastY
-    return -1 
   end
   
-  board.cells[lastX][lastY] = Board.static.air_cell
-  board.cells[self.x][self.y] = Board.static.player_cell
+  local currentCell = board.cells[self.x][self.y]
   
+  if (self.x == lastX and self.y == lastY) then
+    self.timeoutStuck = self.timeoutStuck - 1
+    if self.timeoutStuck < 1 then
+      self:endRun(currentCell)
+    end
+  else
+    self.timeoutStuck = Player.static.timeoutStuckConstant
+  end
+  
+  
+  
+  local fit = self:getFitness()
+  
+  if fit > self.maxFitness then
+    self.maxFitness = fit
+  end
+  
+  
+  if fit <= self.maxFitness then
+    self.timeoutRepeat = self.timeoutRepeat - 1
+    if self.timeoutRepeat < 1 then
+      self:endRun(currentCell)
+    end
+  else
+    self.timeoutRepeat = Player.static.timeoutRepeatConstant
+  end
+  
+  if currentCell ~= Board.static.air_cell then
+    self:endRun(currentCell)
+  end 
 end
 
-function getFitness()
-  --local distance = math.abs(self.y - destRow) + math.abs(self.x - destCol)
-  local distance = getDistanceToDestiny()
-  if(distance == 0) then distance = 0.1 end --evitem dividir entre 0
-  return (1/distance) / rounds
+function Player:draw()
+  draw_square(self.x, self.y,Board.static.player_cell)
+end
+
+function Player:endRun(cellValue)
+  local fitness = self:getFitness()
+  fitness = fitness/self.rounds
+  if cellValue == Board.static.death_cell then
+    fitness = fitness/3
+  elseif cellValue == Board.static.goal_cell then
+    fitness = fitness*2
+  end
+  self.neat:endRun(fitness)
+  
+  self.x, self.y = self.start.x, self.start.y
+  self.timeoutStuck = Player.static.timeoutStuckConstant
+  self.timeoutRepeat = Player.static.timeoutRepeatConstant
+  self.maxFitness = 0
+  self.rounds = 0
+end
+
+
+function Player:getFitness()
+  local distance = math.abs(self.y - 1) + math.abs(self.x - 1)
+  --local distance = getDistanceToDestiny()
+  if(distance == 0) then distance = 0.001 end --evitem dividir entre 0
+  return (1/distance)
 end
 

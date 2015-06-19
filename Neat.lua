@@ -29,7 +29,7 @@ Neat.static.maxNodes = 1000000
 
 function Neat:initialize(id, inputSize, outputSize)
   self.id = id
-  saveLoadFile = self.id
+  self.saveLoadFile = self.id
 
   self.inputSize = inputSize+1
   self.outputSize = outputSize
@@ -94,9 +94,9 @@ function Neat:_newGenome()
 end
 
 function Neat:_copyGenome(genome)
-  local genome2 = newGenome()
+  local genome2 = self:_newGenome()
   for g=1,#genome.genes do
-    table.insert(genome2.genes, copyGene(genome.genes[g]))
+    table.insert(genome2.genes, self:_copyGene(genome.genes[g]))
   end
   genome2.maxneuron = genome.maxneuron
   genome2.mutationRates["connections"] = genome.mutationRates["connections"]
@@ -168,12 +168,12 @@ function Neat:_generateNetwork(genome)
     local gene = genome.genes[i]
     if gene.enabled then
       if network.neurons[gene.out] == nil then
-        network.neurons[gene.out] = newNeuron()
+        network.neurons[gene.out] = self:_newNeuron()
       end
       local neuron = network.neurons[gene.out]
       table.insert(neuron.incoming, gene)
       if network.neurons[gene.into] == nil then
-        network.neurons[gene.into] = newNeuron()
+        network.neurons[gene.into] = self:_newNeuron()
       end
     end
   end
@@ -301,7 +301,7 @@ function Neat:_pointMutate(genome)
 
   for i=1,#genome.genes do
     local gene = genome.genes[i]
-    if math.random() < PerturbChance then
+    if math.random() < Neat.static.perturbChance then
       gene.weight = gene.weight + math.random() * step*2 - step
     else
       gene.weight = math.random()*4-2
@@ -555,10 +555,10 @@ end
 
 function Neat:_breedChild(species)
   local child = {}
-  if math.random() < CrossoverChance then
+  if math.random() < Neat.static.crossoverChance then
     g1 = species.genomes[math.random(1, #species.genomes)]
     g2 = species.genomes[math.random(1, #species.genomes)]
-    child = crossover(g1, g2)
+    child = self:_crossover(g1, g2)
   else
     g = species.genomes[math.random(1, #species.genomes)]
     child = self:_copyGenome(g)
@@ -590,16 +590,16 @@ function Neat:_removeStaleSpecies()
     end
   end
 
-  pool.species = survived
+  self.pool.species = survived
 end
 
 function Neat:_removeWeakSpecies()
   local survived = {}
 
-  local sum = totalAverageFitness()
+  local sum = self:_totalAverageFitness()
   for s = 1,#self.pool.species do
     local species = self.pool.species[s]
-    breed = math.floor(species.averageFitness / sum * Population)
+    breed = math.floor(species.averageFitness / sum * Neat.static.population)
     if breed >= 1 then
       table.insert(survived, species)
     end
@@ -640,9 +640,9 @@ function Neat:_newGeneration()
   local children = {}
   for s = 1,#self.pool.species do
     local species = self.pool.species[s]
-    breed = math.floor(species.averageFitness / sum * Population) - 1
+    breed = math.floor(species.averageFitness / sum * Neat.static.population) - 1
     for i=1,breed do
-      table.insert(children, breedChild(species))
+      table.insert(children, self:_breedChild(species))
     end
   end
   self:_cullSpecies(true) -- Cull all but the top member of each species
@@ -657,7 +657,7 @@ function Neat:_newGeneration()
 
   self.pool.generation = self.pool.generation + 1
 
-  writeFile("backup." .. self.pool.generation .. "." .. saveLoadFile)
+  self:_writeFile("backup." .. self.pool.generation .. "." .. self.saveLoadFile)
 end
 
 function Neat:_initializePool()
@@ -788,20 +788,20 @@ function Neat:loadFile(filename)
 end
 
 function Neat:endRun(fitness)
-  local species = pool.species[pool.currentSpecies]
-  local genome = species.genomes[pool.currentGenome]
+  local species = self.pool.species[self.pool.currentSpecies]
+  local genome = species.genomes[self.pool.currentGenome]
   
   genome.fitness = fitness
 
   if fitness > self.pool.maxFitness then
     self.pool.maxFitness = fitness
-    writeFile("backup." .. self.pool.generation .. "." .. saveLoadFile)
+    self:_writeFile("backup." .. self.pool.generation .. "." .. self.saveLoadFile)
   end
 
   print("Gen " .. self.pool.generation .. " species " .. self.pool.currentSpecies .. " genome " .. self.pool.currentGenome .. " fitness: " .. fitness)
   self.pool.currentSpecies = 1
   self.pool.currentGenome = 1
-  while fitnessAlreadyMeasured() do
+  while self:_fitnessAlreadyMeasured() do
     self:_nextGenome()
   end
   self:_initializeRun()
@@ -857,7 +857,7 @@ function Neat:_main()
 
       if fitness > pool.maxFitness then
         pool.maxFitness = fitness
-        writeFile("backup." .. pool.generation .. "." .. saveLoadFile)
+        writeFile("backup." .. pool.generation .. "." .. self.saveLoadFile)
       end
 
       print("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
