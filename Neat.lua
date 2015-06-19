@@ -3,248 +3,58 @@
 -- Intended for use with the BizHawk emulator and Super Mario World or Super Mario Bros. ROM.
 -- For SMW, make sure you have a save state named "DP1.state" at the beginning of a level,
 -- and put a copy in both the Lua folder and the root directory of BizHawk.
+local class = require 'middleclass'
 
---CONSTANTS-------------
-BOARD_SIZE = 8;
-------------------------
+Neat = class('Neat')
 
-saveLoadFile = "4enratlla"
-InputSize = BOARD_SIZE * BOARD_SIZE -- TODO
 
-Inputs = InputSize+1
-Outputs = 4 -- TODO
+Neat.static.population = 300
+Neat.static.deltaDisjoint = 2.0
+Neat.static.deltaWeights = 0.4
+Neat.static.deltaThreshold = 1.0
 
-Population = 300
-DeltaDisjoint = 2.0
-DeltaWeights = 0.4
-DeltaThreshold = 1.0
+Neat.static.staleSpecies = 15
 
-StaleSpecies = 15
+Neat.static.mutateConnectionsChance = 0.25
+Neat.static.perturbChance = 0.90
+Neat.static.crossoverChance = 0.75
+Neat.static.linkMutationChance = 2.0
+Neat.static.nodeMutationChance = 0.50
+Neat.static.biasMutationChance = 0.40
+Neat.static.stepSize = 0.1
+Neat.static.disableMutationChance = 0.4
+Neat.static.enableMutationChance = 0.2
 
-MutateConnectionsChance = 0.25
-PerturbChance = 0.90
-CrossoverChance = 0.75
-LinkMutationChance = 2.0
-NodeMutationChance = 0.50
-BiasMutationChance = 0.40
-StepSize = 0.1
-DisableMutationChance = 0.4
-EnableMutationChance = 0.2
+Neat.static.maxNodes = 1000000
 
-TimeoutConstant = 5
+function Neat:initialize(id, inputSize, outputSize)
+  self.id = id
+  saveLoadFile = self.id
 
-lastPlayerRow = playerRowgetFi
-lastPlayerCol = playerCol
-timeout = TimeoutConstant
+  self.inputSize = inputSize+1
+  self.outputSize = outputSize
 
-MaxNodes = 1000000
-
-function CreateBoard()
-  --CREATE BOARD---------------------
-  --  0: Aire
-  --  1: Player
-  --  2: Desti
-  -- -1: Caca 
-  Board = {}
-  for i=1,BOARD_SIZE do
-    Board[i] = {}
-    for j=1,BOARD_SIZE do
-      Board[i][j] = 0
-    end
-  end
-  
-  playerRow = 8
-  playerCol = 1
-  lastPlayerRow = playerRow
-  lastPlayerCol = playerCol
-  rounds = 0
-  currentOutputs = {}
-
-  Board[2][6] = -1
-  Board[2][8] = -1
-  Board[3][1] = -1
-  Board[3][2] = -1
-  Board[3][3] = -1
-  Board[3][5] = -1
-  Board[3][8] = -1
-  Board[3][6] = -1
-  Board[4][6] = -1
-  Board[4][7] = -1
-  Board[4][8] = -1
-  Board[1][8] = -1
-  Board[5][2] = -1
-  Board[5][3] = -1
-  Board[5][4] = -1
-  Board[5][5] = -1
-  Board[6][6] = -1
-
-  Board[3][7] = 2
-  Board[playerRow][playerCol] = 1
-end
-
------------------------------------
-
-function printBoard()
-  for i=1,BOARD_SIZE do
-    for j=1,BOARD_SIZE do
-      if(Board[i][j] == -1) then io.write("* ")
-      else io.write(Board[i][j] .. " ")
-      end
-    end
-    print(" ")
+  if pool == nil then
+    self:_initializePool()
   end
 end
 
 
------------------------ BFS STUFFFF ----------------------------
-----------------------------------------------------------------
-function getPosFromRowCol(row, col)
-  return (row-1) * BOARD_SIZE + col
-end
 
-function getRowFromPos(pos)
-  return math.floor((pos-1) / BOARD_SIZE) + 1
-end
-
-function getColFromPos(pos)
-  return ((pos-1) % BOARD_SIZE) + 1
-end
-
-function getBoardValue(pos)
-  row = getRowFromPos(pos)
-  col = getColFromPos(pos)
-  if (not canTravelTo(pos)) then return nil end
-  return Board[row][col]
-end
-
-function contains(array, value)
-  for i=1, #array do
-    if(array[i] == value) then return true end
-  end
-  return false
-end
-
-function table.copy(t)
-  local u = { }
-  for k, v in pairs(t) do u[k] = v end
-  return setmetatable(u, getmetatable(t))
-end
-
-function canTravelTo(pos)
-  row = getRowFromPos(pos)
-  col = getColFromPos(pos)
-  return  row >= 1 and row <= BOARD_SIZE and 
-          col >= 1 and col <= BOARD_SIZE and 
-          Board[row][col] ~= -1 and Board[row][col] ~= 1
-end
-
-function printTable(array)
-  io.write("[")
-  for i=1, #array do
-    io.write("(" .. getRowFromPos(array[i]) .. ", " .. getColFromPos(array[i]) .. ")" .. ", ")
-  end
-  print("]")
-end
-
-function getDistanceToDestiny()
-  --print("::::::::::::::::::")
-  --for i=1,BOARD_SIZE do
-  --for j=1,BOARD_SIZE do
-   --   print(getPosFromRowCol(i,j) .. ": (" .. i .. ", " .. j .. ")" )
-  --end end
-  --print("::::::::::::::::::")
-  
-  --print("______________________ NEW BFS _________________________" )
-  --print("_______________________________________________" )
-  --print("_______________________________________________" )
-  local distance = 0
-  local visited = {}
-  --print(playerRow .. " ...... " .. playerCol)
-  visited[#visited+1] = getPosFromRowCol(playerRow, playerCol)
-  --print(playerRow .. ", " .. playerCol .. ",,, visited[1] " ..  getPosFromRowCol(playerRow, playerCol))
-  local toVisit = { }
-  local toVisitNext = { }
-  toVisitNext[#toVisitNext + 1] = visited[1]
-  local current = -1
-  --print("START POINT: (" .. getRowFromPos(visited[1]) .. ", " .. getColFromPos(visited[1]) .. ")")
-  if(not canTravelTo(visited[1])) then return -1 end --si comenca a una pos fora del taulell o invalida
-
-  while #toVisitNext > 0 do
-   -- io.write("toVisit: ")  printTable(toVisit) 
-    --io.write("toVisitNext: ")  printTable(toVisitNext)
-    toVisit = table.copy(toVisitNext)
-    toVisitNext = {}
-    
-    while #toVisit > 0 do
-      current = toVisit[#toVisit]
-      --print("Current: (" .. getRowFromPos(current) .. ", " .. getColFromPos(current) .. "),  distance from START POINT: " .. distance)
-      visited[#visited+1] = current
-      
-      if( getBoardValue(current) == 2 ) then --DESTINY FOUND
-        --print("FOUND BFS TO DESTINY, distance: " .. distance)
-        return distance 
-      end 
-      
-      --Add each one of the tiles around the player (if they can be travelled and havent been visited b4)
-      for i=-1,1 do 
-        for j=-1,1 do
-          local row = getRowFromPos(current) + i
-          local col = getColFromPos(current) + j
-          local posOfNewTile = getPosFromRowCol(row, col)
-          if( canTravelTo(posOfNewTile) and 
-               not contains(visited, posOfNewTile) and 
-               not contains(toVisit, posOfNewTile) and 
-               not contains(toVisitNext, posOfNewTile)) then
-               
-            toVisitNext[#toVisitNext+1] = posOfNewTile
-            --print("Adding: (" .. getRowFromPos(posOfNewTile) .. ", " .. getColFromPos(posOfNewTile) .. ")")
-            
-          end
-        end
-      end
-      --print("Removing: (" .. getRowFromPos(toVisit[#toVisit]) .. ", " .. getColFromPos(toVisit[#toVisit]) .. ")")
-      table.remove(toVisit, #toVisit) --Pop the last tile toVisit
-    end
-    distance = distance + 1
-  end
-  return distance
-end
-----------------------------------------------------------------
-----------------------------------------------------------------
-
-function getFitness()
-  --local distance = math.abs(playerRow - destRow) + math.abs(playerCol - destCol)
-  local distance = getDistanceToDestiny()
-  if(distance == 0) then distance = 0.1 end --evitem dividir entre 0
-  return (1/distance) / rounds
-end
-
-function getInputs()
-  local inputs = {}
-
-  for i=1,BOARD_SIZE do
-    for j=1,BOARD_SIZE do
-      inputs[#inputs + 1] = Board[i][j]
-    end
-  end
-
-  return inputs
-end
-
-function sigmoid(x)
+function Neat:_sigmoid(x)
   return 2/(1+math.exp(-4.9*x))-1
 end
 
-function newInnovation()
-  pool.innovation = pool.innovation + 1
-  return pool.innovation
+function Neat:_newInnovation()
+  self.pool.innovation = self.pool.innovation + 1
+  return self.pool.innovation
 end
 
-function newPool()
+function Neat:_newPool()
   local pool = {}
   pool.species = {}
   pool.generation = 0
-  pool.innovation = Outputs
+  pool.innovation = self.outputSize
   pool.currentSpecies = 1
   pool.currentGenome = 1
   pool.currentFrame = 0
@@ -253,7 +63,7 @@ function newPool()
   return pool
 end
 
-function newSpecies()
+function Neat:_newSpecies()
   local species = {}
   species.topFitness = 0
   species.staleness = 0
@@ -263,7 +73,7 @@ function newSpecies()
   return species
 end
 
-function newGenome()
+function Neat:_newGenome()
   local genome = {}
   genome.genes = {}
   genome.fitness = 0
@@ -272,18 +82,18 @@ function newGenome()
   genome.maxneuron = 0
   genome.globalRank = 0
   genome.mutationRates = {}
-  genome.mutationRates["connections"] = MutateConnectionsChance
-  genome.mutationRates["link"] = LinkMutationChance
-  genome.mutationRates["bias"] = BiasMutationChance
-  genome.mutationRates["node"] = NodeMutationChance
-  genome.mutationRates["enable"] = EnableMutationChance
-  genome.mutationRates["disable"] = DisableMutationChance
-  genome.mutationRates["step"] = StepSize
+  genome.mutationRates["connections"] = Neat.static.mutateConnectionsChance
+  genome.mutationRates["link"] = Neat.static.linkMutationChance
+  genome.mutationRates["bias"] = Neat.static.biasMutationChance
+  genome.mutationRates["node"] = Neat.static.nodeMutationChance
+  genome.mutationRates["enable"] = Neat.static.enableMutationChance
+  genome.mutationRates["disable"] = Neat.static.disableMutationChance
+  genome.mutationRates["step"] = Neat.static.stepSize
 
   return genome
 end
 
-function copyGenome(genome)
+function Neat:_copyGenome(genome)
   local genome2 = newGenome()
   for g=1,#genome.genes do
     table.insert(genome2.genes, copyGene(genome.genes[g]))
@@ -299,17 +109,17 @@ function copyGenome(genome)
   return genome2
 end
 
-function basicGenome()
-  local genome = newGenome()
+function Neat:_basicGenome()
+  local genome = self:_newGenome()
   local innovation = 1
 
-  genome.maxneuron = Inputs
-  mutate(genome)
+  genome.maxneuron = self.inputSize
+  self:_mutate(genome)
 
   return genome
 end
 
-function newGene()
+function Neat:_newGene()
   local gene = {}
   gene.into = 0
   gene.out = 0
@@ -320,8 +130,8 @@ function newGene()
   return gene
 end
 
-function copyGene(gene)
-  local gene2 = newGene()
+function Neat:_copyGene(gene)
+  local gene2 = self:_newGene()
   gene2.into = gene.into
   gene2.out = gene.out
   gene2.weight = gene.weight
@@ -331,7 +141,7 @@ function copyGene(gene)
   return gene2
 end
 
-function newNeuron()
+function Neat:_newNeuron()
   local neuron = {}
   neuron.incoming = {}
   neuron.value = 0.0
@@ -339,16 +149,16 @@ function newNeuron()
   return neuron
 end
 
-function generateNetwork(genome)
+function Neat:_generateNetwork(genome)
   local network = {}
   network.neurons = {}
 
-  for i=1,Inputs do
-    network.neurons[i] = newNeuron()
+  for i=1,self.inputSize do
+    network.neurons[i] = self:_newNeuron()
   end
 
-  for o=1,Outputs do
-    network.neurons[MaxNodes+o] = newNeuron()
+  for o=1,self.outputSize do
+    network.neurons[Neat.static.maxNodes+o] = self:_newNeuron()
   end
 
   table.sort(genome.genes, function (a,b)
@@ -371,14 +181,14 @@ function generateNetwork(genome)
   genome.network = network
 end
 
-function evaluateNetwork(network, inputs)
+function Neat:_evaluateNetwork(network,inputs)
   table.insert(inputs, 1)
-  if #inputs ~= Inputs then
-    console.writeline("Incorrect number of neural network inputs.")
+  if #inputs ~= self.inputSize then
+    print("Incorrect number of neural network inputs.")
     return {}
   end
 
-  for i=1,Inputs do
+  for i=1,self.inputSize do
     network.neurons[i].value = inputs[i]
   end
 
@@ -391,13 +201,13 @@ function evaluateNetwork(network, inputs)
     end
 
     if #neuron.incoming > 0 then
-      neuron.value = sigmoid(sum)
+      neuron.value = self:_sigmoid(sum)
     end
   end
 
   local outputs = {}
-  for o=1,Outputs do
-    if network.neurons[MaxNodes+o].value > 0 then
+  for o=1,self.outputSize do
+    if network.neurons[Neat.static.maxNodes+o].value > 0 then
       outputs[o] = true
     else
       outputs[o] = false
@@ -407,7 +217,7 @@ function evaluateNetwork(network, inputs)
   return outputs
 end
 
-function crossover(g1, g2)
+function Neat:_crossover(g1, g2)
   -- Make sure g1 is the higher fitness genome
   if g2.fitness > g1.fitness then
     tempg = g1
@@ -415,7 +225,7 @@ function crossover(g1, g2)
     g2 = tempg
   end
 
-  local child = newGenome()
+  local child = self:_newGenome()
 
   local innovations2 = {}
   for i=1,#g2.genes do
@@ -427,9 +237,9 @@ function crossover(g1, g2)
     local gene1 = g1.genes[i]
     local gene2 = innovations2[gene1.innovation]
     if gene2 ~= nil and math.random(2) == 1 and gene2.enabled then
-      table.insert(child.genes, copyGene(gene2))
+      table.insert(child.genes, self:_copyGene(gene2))
     else
-      table.insert(child.genes, copyGene(gene1))
+      table.insert(child.genes, self:_copyGene(gene1))
     end
   end
 
@@ -442,21 +252,21 @@ function crossover(g1, g2)
   return child
 end
 
-function randomNeuron(genes, nonInput)
+function Neat:_randomNeuron(genes, nonInput)
   local neurons = {}
   if not nonInput then
-    for i=1,Inputs do
+    for i=1,self.inputSize do
       neurons[i] = true
     end
   end
-  for o=1,Outputs do
-    neurons[MaxNodes+o] = true
+  for o=1,self.outputSize do
+    neurons[Neat.static.maxNodes+o] = true
   end
   for i=1,#genes do
-    if (not nonInput) or genes[i].into > Inputs then
+    if (not nonInput) or genes[i].into > self.inputSize then
       neurons[genes[i].into] = true
     end
-    if (not nonInput) or genes[i].out > Inputs then
+    if (not nonInput) or genes[i].out > self.inputSize then
       neurons[genes[i].out] = true
     end
   end
@@ -477,7 +287,7 @@ function randomNeuron(genes, nonInput)
   return 0
 end
 
-function containsLink(genes, link)
+function Neat:_containsLink(genes, link)
   for i=1,#genes do
     local gene = genes[i]
     if gene.into == link.into and gene.out == link.out then
@@ -486,7 +296,7 @@ function containsLink(genes, link)
   end
 end
 
-function pointMutate(genome)
+function Neat:_pointMutate(genome)
   local step = genome.mutationRates["step"]
 
   for i=1,#genome.genes do
@@ -499,16 +309,16 @@ function pointMutate(genome)
   end
 end
 
-function linkMutate(genome, forceBias)
-  local neuron1 = randomNeuron(genome.genes, false)
-  local neuron2 = randomNeuron(genome.genes, true)
+function Neat:_linkMutate(genome, forceBias)
+  local neuron1 = self:_randomNeuron(genome.genes, false)
+  local neuron2 = self:_randomNeuron(genome.genes, true)
 
-  local newLink = newGene()
-  if neuron1 <= Inputs and neuron2 <= Inputs then
+  local newLink = self:_newGene()
+  if neuron1 <= self.inputSize and neuron2 <= self.inputSize then
     --Both input nodes
     return
   end
-  if neuron2 <= Inputs then
+  if neuron2 <= self.inputSize then
     -- Swap output and input
     local temp = neuron1
     neuron1 = neuron2
@@ -518,19 +328,19 @@ function linkMutate(genome, forceBias)
   newLink.into = neuron1
   newLink.out = neuron2
   if forceBias then
-    newLink.into = Inputs
+    newLink.into = self.inputSize
   end
 
-  if containsLink(genome.genes, newLink) then
+  if self:_containsLink(genome.genes, newLink) then
     return
   end
-  newLink.innovation = newInnovation()
+  newLink.innovation = self:_newInnovation()
   newLink.weight = math.random()*4-2
 
   table.insert(genome.genes, newLink)
 end
 
-function nodeMutate(genome)
+function Neat:_nodeMutate(genome)
   if #genome.genes == 0 then
     return
   end
@@ -543,21 +353,21 @@ function nodeMutate(genome)
   end
   gene.enabled = false
 
-  local gene1 = copyGene(gene)
+  local gene1 = self:_copyGene(gene)
   gene1.out = genome.maxneuron
   gene1.weight = 1.0
-  gene1.innovation = newInnovation()
+  gene1.innovation = self:_newInnovation()
   gene1.enabled = true
   table.insert(genome.genes, gene1)
 
-  local gene2 = copyGene(gene)
+  local gene2 = self:_copyGene(gene)
   gene2.into = genome.maxneuron
-  gene2.innovation = newInnovation()
+  gene2.innovation = self:_newInnovation()
   gene2.enabled = true
   table.insert(genome.genes, gene2)
 end
 
-function enableDisableMutate(genome, enable)
+function Neat:_enableDisableMutate(genome, enable)
   local candidates = {}
   for _,gene in pairs(genome.genes) do
     if gene.enabled == not enable then
@@ -573,7 +383,7 @@ function enableDisableMutate(genome, enable)
   gene.enabled = not gene.enabled
 end
 
-function mutate(genome)
+function Neat:_mutate(genome)
   for mutation,rate in pairs(genome.mutationRates) do
     if math.random(1,2) == 1 then
       genome.mutationRates[mutation] = 0.95*rate
@@ -583,13 +393,13 @@ function mutate(genome)
   end
 
   if math.random() < genome.mutationRates["connections"] then
-    pointMutate(genome)
+    self:_pointMutate(genome)
   end
 
   local p = genome.mutationRates["link"]
   while p > 0 do
     if math.random() < p then
-      linkMutate(genome, false)
+      self:_linkMutate(genome, false)
     end
     p = p - 1
   end
@@ -597,7 +407,7 @@ function mutate(genome)
   p = genome.mutationRates["bias"]
   while p > 0 do
     if math.random() < p then
-      linkMutate(genome, true)
+      self:_linkMutate(genome, true)
     end
     p = p - 1
   end
@@ -605,7 +415,7 @@ function mutate(genome)
   p = genome.mutationRates["node"]
   while p > 0 do
     if math.random() < p then
-      nodeMutate(genome)
+      self:_nodeMutate(genome)
     end
     p = p - 1
   end
@@ -613,7 +423,7 @@ function mutate(genome)
   p = genome.mutationRates["enable"]
   while p > 0 do
     if math.random() < p then
-      enableDisableMutate(genome, true)
+      self:_enableDisableMutate(genome, true)
     end
     p = p - 1
   end
@@ -621,13 +431,13 @@ function mutate(genome)
   p = genome.mutationRates["disable"]
   while p > 0 do
     if math.random() < p then
-      enableDisableMutate(genome, false)
+      self:_enableDisableMutate(genome, false)
     end
     p = p - 1
   end
 end
 
-function disjoint(genes1, genes2)
+function Neat:_disjoint(genes1, genes2)
   local i1 = {}
   for i = 1,#genes1 do
     local gene = genes1[i]
@@ -660,7 +470,7 @@ function disjoint(genes1, genes2)
   return disjointGenes / n
 end
 
-function weights(genes1, genes2)
+function Neat:_weights(genes1, genes2)
   local i2 = {}
   for i = 1,#genes2 do
     local gene = genes2[i]
@@ -681,16 +491,16 @@ function weights(genes1, genes2)
   return sum / coincident
 end
 
-function sameSpecies(genome1, genome2)
-  local dd = DeltaDisjoint*disjoint(genome1.genes, genome2.genes)
-  local dw = DeltaWeights*weights(genome1.genes, genome2.genes) 
-  return dd + dw < DeltaThreshold
+function Neat:_sameSpecies(genome1, genome2)
+  local dd = Neat.static.deltaDisjoint *self:_disjoint(genome1.genes, genome2.genes)
+  local dw = Neat.static.deltaWeights*self:_weights(genome1.genes, genome2.genes) 
+  return dd + dw < Neat.static.deltaThreshold
 end
 
-function rankGlobally()
+function Neat:_rankGlobally()
   local global = {}
-  for s = 1,#pool.species do
-    local species = pool.species[s]
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
     for g = 1,#species.genomes do
       table.insert(global, species.genomes[g])
     end
@@ -704,7 +514,7 @@ function rankGlobally()
   end
 end
 
-function calculateAverageFitness(species)
+function Neat:_calculateAverageFitness(species)
   local total = 0
 
   for g=1,#species.genomes do
@@ -715,19 +525,19 @@ function calculateAverageFitness(species)
   species.averageFitness = total / #species.genomes
 end
 
-function totalAverageFitness()
+function Neat:_totalAverageFitness()
   local total = 0
-  for s = 1,#pool.species do
-    local species = pool.species[s]
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
     total = total + species.averageFitness
   end
 
   return total
 end
 
-function cullSpecies(cutToOne)
-  for s = 1,#pool.species do
-    local species = pool.species[s]
+function Neat:_cullSpecies(cutToOne)
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
 
     table.sort(species.genomes, function (a,b)
         return (a.fitness > b.fitness)
@@ -743,7 +553,7 @@ function cullSpecies(cutToOne)
   end
 end
 
-function breedChild(species)
+function Neat:_breedChild(species)
   local child = {}
   if math.random() < CrossoverChance then
     g1 = species.genomes[math.random(1, #species.genomes)]
@@ -751,19 +561,19 @@ function breedChild(species)
     child = crossover(g1, g2)
   else
     g = species.genomes[math.random(1, #species.genomes)]
-    child = copyGenome(g)
+    child = self:_copyGenome(g)
   end
 
-  mutate(child)
+  self:_mutate(child)
 
   return child
 end
 
-function removeStaleSpecies()
+function Neat:_removeStaleSpecies()
   local survived = {}
 
-  for s = 1,#pool.species do
-    local species = pool.species[s]
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
 
     table.sort(species.genomes, function (a,b)
         return (a.fitness > b.fitness)
@@ -775,7 +585,7 @@ function removeStaleSpecies()
     else
       species.staleness = species.staleness + 1
     end
-    if species.staleness < StaleSpecies or species.topFitness >= pool.maxFitness then
+    if species.staleness < Neat.static.staleSpecies or species.topFitness >= self.pool.maxFitness then
       table.insert(survived, species)
     end
   end
@@ -783,184 +593,125 @@ function removeStaleSpecies()
   pool.species = survived
 end
 
-function removeWeakSpecies()
+function Neat:_removeWeakSpecies()
   local survived = {}
 
   local sum = totalAverageFitness()
-  for s = 1,#pool.species do
-    local species = pool.species[s]
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
     breed = math.floor(species.averageFitness / sum * Population)
     if breed >= 1 then
       table.insert(survived, species)
     end
   end
 
-  pool.species = survived
+  self.pool.species = survived
 end
 
 
-function addToSpecies(child)
+function Neat:_addToSpecies(child)
   local foundSpecies = false
-  for s=1,#pool.species do
-    local species = pool.species[s]
-    if not foundSpecies and sameSpecies(child, species.genomes[1]) then
+  for s=1,#self.pool.species do
+    local species = self.pool.species[s]
+    if not foundSpecies and self:_sameSpecies(child, species.genomes[1]) then
       table.insert(species.genomes, child)
       foundSpecies = true
     end
   end
 
   if not foundSpecies then
-    local childSpecies = newSpecies()
+    local childSpecies = self:_newSpecies()
     table.insert(childSpecies.genomes, child)
-    table.insert(pool.species, childSpecies)
+    table.insert(self.pool.species, childSpecies)
   end
 end
 
-function newGeneration()
-  cullSpecies(false) -- Cull the bottom half of each species
-  rankGlobally()
-  removeStaleSpecies()
-  rankGlobally()
-  for s = 1,#pool.species do
-    local species = pool.species[s]
-    calculateAverageFitness(species)
+function Neat:_newGeneration()
+  self:_cullSpecies(false) -- Cull the bottom half of each species
+  self:_rankGlobally()
+  self:_removeStaleSpecies()
+  self:_rankGlobally()
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
+    self:_calculateAverageFitness(species)
   end
-  removeWeakSpecies()
-  local sum = totalAverageFitness()
+  self:_removeWeakSpecies()
+  local sum = self:_totalAverageFitness()
   local children = {}
-  for s = 1,#pool.species do
-    local species = pool.species[s]
+  for s = 1,#self.pool.species do
+    local species = self.pool.species[s]
     breed = math.floor(species.averageFitness / sum * Population) - 1
     for i=1,breed do
       table.insert(children, breedChild(species))
     end
   end
-  cullSpecies(true) -- Cull all but the top member of each species
-  while #children + #pool.species < Population do
-    local species = pool.species[math.random(1, #pool.species)]
-    table.insert(children, breedChild(species))
+  self:_cullSpecies(true) -- Cull all but the top member of each species
+  while #children + #self.pool.species < Neat.static.population do
+    local species = self.pool.species[math.random(1, #self.pool.species)]
+    table.insert(children, self:_breedChild(species))
   end
   for c=1,#children do
     local child = children[c]
-    addToSpecies(child)
+    self:_addToSpecies(child)
   end
 
-  pool.generation = pool.generation + 1
+  self.pool.generation = self.pool.generation + 1
 
-  writeFile("backup." .. pool.generation .. "." .. saveLoadFile)
+  writeFile("backup." .. self.pool.generation .. "." .. saveLoadFile)
 end
 
-function initializePool()
-  pool = newPool()
+function Neat:_initializePool()
+  self.pool = self:_newPool()
 
-  for i=1,Population do
-    basic = basicGenome()
-    addToSpecies(basic)
+  for i=1,Neat.static.population do
+    local basic = self:_basicGenome()
+    self:_addToSpecies(basic)
   end
 
-  initializeRun()
+  self:_initializeRun()
 end
 
-function initializeRun()
-  
-  CreateBoard()
-  
-  local species = pool.species[pool.currentSpecies]
-  local genome = species.genomes[pool.currentGenome]
-  generateNetwork(genome)
-  evaluateCurrent()
+function Neat:_initializeRun()
+
+
+  local species = self.pool.species[self.pool.currentSpecies]
+  local genome = species.genomes[self.pool.currentGenome]
+  self:_generateNetwork(genome)
+  --self:evaluateCurrent()
 end
 
-function evaluateCurrent()
-  local species = pool.species[pool.currentSpecies]
-  local genome = species.genomes[pool.currentGenome]
+function Neat:evaluateCurrent(inputs)
+  local species = self.pool.species[self.pool.currentSpecies]
+  local genome = species.genomes[self.pool.currentGenome]
 
-  inputs = getInputs()
-  outputs = evaluateNetwork(genome.network, inputs)
-
-  --APPLY MOVEMENT
-  -- 1: up
-  -- 2: right
-  -- 3: down
-  -- 4: left
-  --[[
-  print(playerRow .. ", " .. playerCol)
-  print("---------------------")
-  io.write("UP: ") 
-  print(outputs[1])
-  io.write("RIGHT: ") 
-  print(outputs[2])
-  io.write("DOWN: ") 
-  print(outputs[3])
-  io.write("LEFT: ") 
-  print(outputs[4])
-  ]]
-  
-  if(outputs[1] and not outputs[3]) then playerRow = playerRow - 1
-  elseif(not outputs[1] and outputs[3]) then playerRow = playerRow + 1 
-  end
-
-  if(outputs[2] and not outputs[4]) then playerCol = playerCol + 1
-  elseif(not outputs[2] and outputs[4]) then playerCol = playerCol - 1 
-  end
-  
-  --print(playerRow .. ", " .. playerCol)
-  
-  if(playerCol > BOARD_SIZE) then 
-    playerCol = lastPlayerCol
-    return -1
-  elseif(playerCol < 1) then 
-    playerCol = lastPlayerCol
-    return -1 
-  end
-  
-  if(playerRow > BOARD_SIZE) then 
-    playerRow = lastPlayerRow
-    return -1 
-  elseif(playerRow < 1) then 
-    playerRow = lastPlayerRow
-    return -1 
-  end
-
-  currentOutputs = outputs
-  
-  lastValue = Board[playerRow][playerCol]
-  Board[lastPlayerRow][lastPlayerCol] = 0
-  Board[playerRow][playerCol] = 1
-
-  return lastValue
+  return self:_evaluateNetwork(genome.network, inputs)
 end
 
-if pool == nil then
-  initializePool()
-end
-
-
-function nextGenome()
-  pool.currentGenome = pool.currentGenome + 1
-  if pool.currentGenome > #pool.species[pool.currentSpecies].genomes then
-    pool.currentGenome = 1
-    pool.currentSpecies = pool.currentSpecies+1
-    if pool.currentSpecies > #pool.species then
-      newGeneration()
-      pool.currentSpecies = 1
+function Neat:_nextGenome()
+  self.pool.currentGenome = self.pool.currentGenome + 1
+  if self.pool.currentGenome > #self.pool.species[self.pool.currentSpecies].genomes then
+    self.pool.currentGenome = 1
+    self.pool.currentSpecies = self.pool.currentSpecies+1
+    if self.pool.currentSpecies > #self.pool.species then
+      self:_newGeneration()
+      self.pool.currentSpecies = 1
     end
   end
 end
 
-function fitnessAlreadyMeasured()
-  local species = pool.species[pool.currentSpecies]
-  local genome = species.genomes[pool.currentGenome]
+function Neat:_fitnessAlreadyMeasured()
+  local species = self.pool.species[self.pool.currentSpecies]
+  local genome = species.genomes[self.pool.currentGenome]
 
   return genome.fitness ~= 0
 end
 
-function writeFile(filename)
+function Neat:_writeFile(filename)
   local file = io.open(filename, "w")
-  file:write(pool.generation .. "\n")
-  file:write(pool.maxFitness .. "\n")
-  file:write(#pool.species .. "\n")
-  for n,species in pairs(pool.species) do
+  file:write(self.pool.generation .. "\n")
+  file:write(self.pool.maxFitness .. "\n")
+  file:write(#self.pool.species .. "\n")
+  for n,species in pairs(self.pool.species) do
     file:write(species.topFitness .. "\n")
     file:write(species.staleness .. "\n")
     file:write(#species.genomes .. "\n")
@@ -990,21 +741,21 @@ function writeFile(filename)
   file:close()
 end
 
-function loadFile(filename)
+function Neat:loadFile(filename)
   local file = io.open(filename, "r")
-  pool = newPool()
-  pool.generation = file:read("*number")
-  pool.maxFitness = file:read("*number")
+  self.pool = self:_newPool()
+  self.pool.generation = file:read("*number")
+  self.pool.maxFitness = file:read("*number")
 
   local numSpecies = file:read("*number")
   for s=1,numSpecies do
-    local species = newSpecies()
-    table.insert(pool.species, species)
+    local species = self:_newSpecies()
+    table.insert(self.pool.species, species)
     species.topFitness = file:read("*number")
     species.staleness = file:read("*number")
     local numGenomes = file:read("*number")
     for g=1,numGenomes do
-      local genome = newGenome()
+      local genome = self:_newGenome()
       table.insert(species.genomes, genome)
       genome.fitness = file:read("*number")
       genome.maxneuron = file:read("*number")
@@ -1015,7 +766,7 @@ function loadFile(filename)
       end
       local numGenes = file:read("*number")
       for n=1,numGenes do
-        local gene = newGene()
+        local gene = self:_newGene()
         table.insert(genome.genes, gene)
         local enabled
         gene.into, gene.out, gene.weight, gene.innovation, enabled = file:read("*number", "*number", "*number", "*number", "*number")
@@ -1031,17 +782,34 @@ function loadFile(filename)
   file:close()
 
   while fitnessAlreadyMeasured() do
-    nextGenome()
+    self:_nextGenome()
   end
-  initializeRun()
+  self:_initializeRun()
 end
 
-function pause()
-   io.stdin:read'*l'
+function Neat:endRun(fitness)
+  local species = pool.species[pool.currentSpecies]
+  local genome = species.genomes[pool.currentGenome]
+  
+  genome.fitness = fitness
+
+  if fitness > self.pool.maxFitness then
+    self.pool.maxFitness = fitness
+    writeFile("backup." .. self.pool.generation .. "." .. saveLoadFile)
+  end
+
+  print("Gen " .. self.pool.generation .. " species " .. self.pool.currentSpecies .. " genome " .. self.pool.currentGenome .. " fitness: " .. fitness)
+  self.pool.currentSpecies = 1
+  self.pool.currentGenome = 1
+  while fitnessAlreadyMeasured() do
+    self:_nextGenome()
+  end
+  self:_initializeRun()
 end
 
-MaxRounds = 50
-function main() 
+
+--[[MaxRounds = 50
+function Neat:_main() 
   
   CreateBoard()
   writeFile("temp.pool")
@@ -1112,4 +880,4 @@ function main()
       end
     end
   end
-end
+end]]
