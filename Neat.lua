@@ -707,8 +707,9 @@ function Neat:_fitnessAlreadyMeasured()
 end
 
 function Neat:_writeFile(filename)
-   local dir = "backups/" .. self.id .. "/"
-  os.execute("mkdir -p ".. self.id)
+  local dir = "backups/" .. self.id .. "/"
+  os.execute("mkdir -p ".. dir)
+  print(dir .. filename)
   local file = io.open(dir .. filename, "w")
   file:write(self.pool.generation .. "\n")
   file:write(self.pool.maxFitness .. "\n")
@@ -745,7 +746,7 @@ end
 
 function Neat:loadFile(filename)
   local dir = "backups/" .. self.id .. "/"
-  os.execute("mkdir -p ".. self.id)
+  os.execute("mkdir -p ".. dir)
   local file = io.open(dir .. filename, "w")
   self.pool = self:_newPool()
   self.pool.generation = file:read("*number")

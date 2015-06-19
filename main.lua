@@ -1,35 +1,47 @@
 require 'Board'
 require 'Player'
+require 'bfs'
+
 class = require 'middleclass'
 
 
 function love.load()
   board = Board:new()
-  board.cells[1][1] = Board.static.goal_cell
-  board.cells[2][1] = Board.static.death_cell
-  board.cells[1][2] = Board.static.death_cell
+  board.cells[8][3] = Board.static.goal_cell
+  board.cells[8][5] = Board.static.death_cell
+  board.cells[7][5] = Board.static.death_cell
+  board.cells[6][5] = Board.static.death_cell
   board.cells[5][5] = Board.static.death_cell
+  board.cells[4][5] = Board.static.death_cell
+  board.cells[3][5] = Board.static.death_cell
 
-  player = Player:new(8,8)
+  for i=1,8 do
+    for j=1,8 do
+      io.write(BFS(i,j,board) .. " ")
+    end
+    print(" ")
+  end
+  player = Player:new(8,7)
   frame = 0
   maxFitness = 0
 end
 
--- Increase the size of the rectangle every frame.
+
 function love.update(dt)
-  if frame%1 == 0 then
+ 
+  --if frame%1 == 0 then
   player:update(board)
-end
+  --end
   if player:getFitness() > maxFitness then maxFitness = player:getFitness() end
   frame = frame + 1
 end
 
 
 function draw_square(row,col,val)
-  if (val == Board.static.death_cell) then love.graphics.setColor(255,0,0)
+  if (val == Board.static.death_cell) then love.graphics.setColor(255,50,50)
   elseif (val == Board.static.air_cell) then love.graphics.setColor(60,60,60)
   elseif (val == Board.static.player_cell) then love.graphics.setColor(50,255,50)
-  else love.graphics.setColor(50,0,100)
+  else love.graphics.setColor(50,50,255)
   end
   
 

@@ -1,45 +1,79 @@
-function BFS(data, func, max_depth)
-  max_depth = max_depth or 10000
+require 'Board'
 
-  local queue = {}
-  local depth = {} -- depth queue
-  local head  = 1
-  local tail  = 1
-  local function push(e, d)
-    queue[tail] = e
-    depth[tail] = d
-    tail = tail + 1
-  end
+function BFS(startI, startJ, matrix)
 
-  local function pop()
-    if head == tail then return nil end
-    local e, d = queue[head], depth[head]
-    head = head + 1
-    return e, d
-  end
+  local max_depth = 10000
 
-  local elem = data
-  local d = 1
+  local visited = {}
 
-  local function visit(i,j)
-    if (i < 1 or j < 1 or i > Board.static.size or j > Board.static.size) then
-      return nil
+  for i=1,Board.static.size do
+    visited[i] = {}
+    for j=1,Board.static.size do
+      visited[i][j] = false
     end
-    if (board[i][j] ~= Board.static.death_cell) then
-      push(child, d + 1)
-    
+  end 
+
+  local queue = {}
+  local depth = {} -- depth queue
+  local head  = 1
+  local tail  = 1
+  
+  local function push(e, d)
+    --print("TAIL " .. tail)
+    queue[tail] = e
+    depth[tail] = d
+    tail = tail + 1
+  end
+
+  local function pop()
+    if head == tail then return nil end
+    local e, d = queue[head], depth[head]
+    head = head + 1
+    return e, d
   end
   
-  while elem and d <= max_depth do
+  local function intToPos(i)
+    local col = i%Board.static.size
+    if col < 1 then col = Board.static.size end
+    return math.ceil(i/Board.static.size),col
+  end
+  
+  local function posToInt(i,j)
+    return  (i-1)*Board.static.size + j
+  end
+  
 
+-- BFS
 
-    if board[i][j] == Board.static.goal_cell then return d end
-    for _, child in ipairs(elem) do
-      if type(child) == 'table' then
-        push(child, d + 1)
-      end
-    end
+  local currentPos = posToInt(startI,startJ)
+  local d = 1
+  if board.cells[startI][startJ] == Board.static.death_cell then return 999999999 end
+  local function visit(i,j, d)
+    if (i < 1 or j < 1 or i > Board.static.size or j > Board.static.size or visited[i][j]) then
+      return nil
+    end
 
-    elem, d = pop()
-  end
+    if (matrix.cells[i][j] ~= Board.static.death_cell) then
+      push(posToInt(i,j), d + 1)
+    end
+    visited[i][j] = true
+  end
+
+  while currentPos and d <= max_depth do
+
+   
+    local i,j = intToPos(currentPos)
+    --print(i,j)
+    if matrix.cells[i][j] == Board.static.goal_cell then return d-1 end
+    local k, l
+    for k = -1, 1 do
+      for l = -1, 1 do
+        --print(i - k, j - l, d)
+        visit(i - k, j - l, d)
+      end
+    end
+
+    currentPos, d = pop()
+  end
+  
 end 

@@ -1,5 +1,6 @@
 local class = require 'middleclass'
 require 'Neat'
+require 'bfs'
 
 Player = class('Player') 
 
@@ -15,7 +16,7 @@ function Player:initialize(x, y)
   self.timeoutRepeat = Player.static.timeoutRepeatConstant
   self.rounds = 0
   self.maxFitness = 0
-  self.neat = Neat:new(0,8*8,4)
+  self.neat = Neat:new(0,8+8,4)
 end
 
 function printTable(table)
@@ -35,9 +36,25 @@ function Player:update(board)
   self.rounds = self.rounds + 1
   
   local inputs = {}
-  for i=1, Board.static.size do
+  --[[for i=1, Board.static.size do
     for j=1, Board.static.size do
       inputs[#inputs + 1] = board.cells[i][j]
+    end
+  end]]
+  
+  for i=1,8 do
+    if i == self.x then
+      inputs[i] = 2
+    else 
+      inputs[i] = 0
+    end
+  end
+  
+  for i=9,16 do
+    if i-8 == self.y then
+      inputs[i] = 2
+    else 
+      inputs[i] = 0
     end
   end
   
@@ -112,9 +129,9 @@ end
 function Player:endRun(cellValue)
   local fitness = self:getFitness()
   fitness = fitness/self.rounds
-  if cellValue == Board.static.death_cell then
-    fitness = fitness/3
-  elseif cellValue == Board.static.goal_cell then
+  --if cellValue == Board.static.death_cell then
+    --fitness = fitness/3
+  if cellValue == Board.static.goal_cell then
     fitness = fitness*2
   end
   self.neat:endRun(fitness)
@@ -128,7 +145,7 @@ end
 
 
 function Player:getFitness()
-  local distance = math.abs(self.y - 1) + math.abs(self.x - 1)
+  local distance = BFS(self.x,self.y,board) --math.abs(self.y - 1) + math.abs(self.x - 1)
   --local distance = getDistanceToDestiny()
   if(distance == 0) then distance = 0.001 end --evitem dividir entre 0
   return (1/distance)

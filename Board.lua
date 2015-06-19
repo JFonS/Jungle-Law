@@ -21,8 +21,6 @@ function Board:initialize()
   self.cells = cells
 end
 
-
-
 function Board:draw()
   for i=1,Board.static.size do
     for j=1,Board.static.size do
