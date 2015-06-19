@@ -21,10 +21,19 @@ function BFS(data, func, max_depth)
   local elem = data
   local d = 1
 
+  local function visit(i,j)
+    if (i < 1 or j < 1 or i > Board.static.size or j > Board.static.size) then
+      return nil
+    end
+    if (board[i][j] ~= Board.static.death_cell) then
+      push(child, d + 1)
+    
+  end
+  
   while elem and d <= max_depth do
 
-    local r = func(elem)
-    if r then return elem end
+
+    if board[i][j] == Board.static.goal_cell then return d end
     for _, child in ipairs(elem) do
       if type(child) == 'table' then
         push(child, d + 1)

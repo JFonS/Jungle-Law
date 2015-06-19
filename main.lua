@@ -6,10 +6,9 @@ class = require 'middleclass'
 function love.load()
   board = Board:new()
   board.cells[1][1] = Board.static.goal_cell
-  board.cells[4][5] = Board.static.death_cell
-  board.cells[6][6] = Board.static.death_cell
-  board.cells[7][6] = Board.static.death_cell
-  board.cells[8][6] = Board.static.death_cell
+  board.cells[2][1] = Board.static.death_cell
+  board.cells[1][2] = Board.static.death_cell
+  board.cells[5][5] = Board.static.death_cell
 
   player = Player:new(8,8)
   frame = 0
@@ -32,6 +31,7 @@ function draw_square(row,col,val)
   elseif (val == Board.static.player_cell) then love.graphics.setColor(50,255,50)
   else love.graphics.setColor(50,0,100)
   end
+  
 
   love.graphics.rectangle("fill",(col-1)*Board.static.cellSize, 
     (row-1)*Board.static.cellSize, Board.static.cellSize, Board.static.cellSize)
