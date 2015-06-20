@@ -7,13 +7,24 @@ class = require 'middleclass'
 
 function love.load()
   board = Board:new()
-  board.cells[8][3] = Board.static.goal_cell
+  board.cells[1][1] = Board.static.goal_cell
+  
+  
   board.cells[8][5] = Board.static.death_cell
   board.cells[7][5] = Board.static.death_cell
   board.cells[6][5] = Board.static.death_cell
   board.cells[5][5] = Board.static.death_cell
   board.cells[4][5] = Board.static.death_cell
   board.cells[3][5] = Board.static.death_cell
+  
+  board.cells[1][2] = Board.static.death_cell
+  board.cells[2][2] = Board.static.death_cell
+  board.cells[3][2] = Board.static.death_cell
+  board.cells[4][2] = Board.static.death_cell
+  board.cells[5][2] = Board.static.death_cell
+  board.cells[6][2] = Board.static.death_cell
+  board.cells[7][2] = Board.static.death_cell
+
 
   for i=1,8 do
     for j=1,8 do

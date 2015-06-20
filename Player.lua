@@ -128,11 +128,12 @@ end
 
 function Player:endRun(cellValue)
   local fitness = self:getFitness()
-  fitness = fitness/self.rounds
-  --if cellValue == Board.static.death_cell then
-    --fitness = fitness/3
-  if cellValue == Board.static.goal_cell then
-    fitness = fitness*2
+  --fitness = fitness/self.rounds
+  if cellValue == Board.static.death_cell then
+    fitness = fitness/3
+  elseif cellValue == Board.static.goal_cell then
+    fitness = fitness+100-self.rounds
+    print("Reached, fitness: " .. fitness)
   end
   self.neat:endRun(fitness)
   
