@@ -1,6 +1,8 @@
 require 'Board'
 
-function BFS(startI, startJ, matrix)
+
+INFINITE = 999999999
+function BFS(startI, startJ, matrix, endI, endJ)
 
   local max_depth = 10000
 
@@ -47,7 +49,7 @@ function BFS(startI, startJ, matrix)
 
   local currentPos = posToInt(startI,startJ)
   local d = 1
-  if board.cells[startI][startJ] == Board.static.death_cell then return 999999999 end
+  if matrix.cells[startI][startJ] == Board.static.death_cell then return INFINITE end
   local function visit(i,j, d)
     if (i < 1 or j < 1 or i > Board.static.size or j > Board.static.size or visited[i][j]) then
       return nil
@@ -64,7 +66,7 @@ function BFS(startI, startJ, matrix)
    
     local i,j = intToPos(currentPos)
     --print(i,j)
-    if matrix.cells[i][j] == Board.static.goal_cell then return d-1 end
+    if matrix.cells[i][j] == Board.static.goal_cell or (i == endI and j == endJ) then return d-1 end
     local k, l
     for k = -1, 1 do
       for l = -1, 1 do

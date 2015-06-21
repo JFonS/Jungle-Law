@@ -22,9 +22,14 @@ function Board:initialize()
 end
 
 function Board:draw()
+  local color = "fffffff"
   for i=1,Board.static.size do
     for j=1,Board.static.size do
-      draw_square(i,j,self.cells[i][j])
+      if (self.cells[i][j] == Board.static.death_cell) then color = "red"
+      elseif (self.cells[i][j] == Board.static.air_cell) then color = "303030"
+      elseif (self.cells[i][j] == Board.static.goal_cell) then color = "3030ff"
+      end
+      draw_square(i,j,color)
     end
   end
 end
