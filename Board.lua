@@ -6,8 +6,8 @@ Board.static.air_cell = 0
 Board.static.player_cell = 1 
 Board.static.goal_cell = 2 
 
-Board.static.cellSize = 40
-Board.static.size = 8
+Board.static.cellSize = 10
+Board.static.size = 12
 Board.static.fullSize = Board.static.cellSize * Board.static.size
 
 function Board:initialize()
@@ -32,4 +32,8 @@ function Board:draw()
       draw_square(i,j,color)
     end
   end
+end
+
+function Board.static.valid(i,j)
+  return not (i > Board.static.size or i < 1 or j > Board.static.size or j < 1)
 end

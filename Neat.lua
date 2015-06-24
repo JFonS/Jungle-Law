@@ -792,6 +792,11 @@ function Neat:loadFile(filename)
   self:_initializeRun()
 end
 
+function Neat:setID(id)
+  self.id = id
+  self.saveLoadFile = self.id
+end
+
 function Neat:endRun(fitness)
   local species = self.pool.species[self.pool.currentSpecies]
   local genome = species.genomes[self.pool.currentGenome]

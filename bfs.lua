@@ -33,17 +33,6 @@ function BFS(startI, startJ, matrix, endI, endJ)
     head = head + 1
     return e, d
   end
-  
-  local function intToPos(i)
-    local col = i%Board.static.size
-    if col < 1 then col = Board.static.size end
-    return math.ceil(i/Board.static.size),col
-  end
-  
-  local function posToInt(i,j)
-    return  (i-1)*Board.static.size + j
-  end
-  
 
 -- BFS
 

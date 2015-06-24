@@ -9,7 +9,7 @@ function Core:initialize(players, board, nInputs)
   self.playerIDs = {}
   local id = 1
   for _,player in ipairs(players) do
-    player.id = #self.players+1
+    player:setID(#self.players+1)
     self.players[#self.players+1] = player
     table.insert(self.playerIDs,player.id)
   end
@@ -29,16 +29,31 @@ function Core:getFitness(playerID)
   return 0
 end
 
+function Core:updatePlayer(id)
+
+end
 
 function Core:update()
   local order = arrayCopy(self.playerIDs)
   order = scrambleArray(order)
-  
+
+  local stillAlive = false
   for _,id in ipairs(order) do
-    local input = self:getInput(id)
-    self.players[id]:update(self.board, input)
+    if self.players[id].alive then
+      stillAlive = true
+      self:updatePlayer(id)
+      if not self.players[id].alive then
+        self.players[id].fitness = self:getFitness(id)
+      end
+    end
+  end
+
+  if not stillAlive then
+    self:endRun()
   end
 end
+
+
 
 
 function Core:draw()
@@ -49,9 +64,14 @@ function Core:draw()
 end
 
 function Core:endRun(id)
-  
-    
+  print("REKT")
+  for _,id in ipairs(self.playerIDs) do
+    self.players[id]:endRun()
+  end
+
+  for _,id in ipairs(self.playerIDs) do
+    self.players[id]:revive()
+  end
 end
 
-  
-  
+
